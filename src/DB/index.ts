@@ -8,8 +8,8 @@ import bcrypt from 'bcrypt';
 const superUser = {
   name: 'starter backend',
   role: USER_ROLES.ADMIN,
-  email: config.admin.email,
-  password: config.admin.password,
+  email: config.admin.email || 'admin@example.com',
+  password: config.admin.password || 'defaultPassword',
   phone: '14524578',
   verified: true,
   gender: 'MALE',
@@ -28,8 +28,13 @@ const seedAdmin = async () => {
       );
       await prisma.user.create({
         data: {
-          ...superUser,
+          name: superUser.name,
+          role: superUser.role,
+          email: superUser.email,
           password: hashedPassword,
+          phone: superUser.phone,
+          verified: superUser.verified,
+          gender: superUser.gender,
         },
       });
       logger.info(chalk.green('✔ admin created successfully!'));
