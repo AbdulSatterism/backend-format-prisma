@@ -7,18 +7,19 @@ import { USER_ROLES } from '../../../enums/user';
 import { emailHelper } from '../../../helpers/emailHelper';
 import { emailTemplate } from '../../../shared/emailTemplate';
 import generateOTP from '../../../util/generateOTP';
-
-import { IUserCreate, IUserUpdate } from './user.interface';
-import { UserHelpers } from './user.model';
 import unlinkFile from '../../../shared/unlinkFile';
 import AppError from '../../errors/AppError';
-import { prisma } from '../../../lib/prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import config from '../../../config';
+import { prisma } from '@/util/db';
+import type { TCreateUserArgs, TUpdateUserProfileArgs } from './user.interface';
 
-const createUserFromDb = async (payload: IUserCreate) => {
+const createUserFromDb = async (payload: TCreateUserArgs) => {
   // Check if user exists
-  const existingUser = await UserHelpers.isExistUserByEmail(payload.email);
+  const existingUser = await prisma.user.findFirst({
+    where: { email: payload.email },
+  });
+
   if (existingUser) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Email already used');
   }
@@ -42,21 +43,22 @@ const createUserFromDb = async (payload: IUserCreate) => {
   }
 
   const otp = generateOTP();
-  const emailValues = {
+
+  //? send email verification
+  const accountEmailTemplate = emailTemplate.createAccount({
     name: result.name,
     otp,
-    email: result.email,
-  };
+    email: payload.email,
+  });
 
-  const accountEmailTemplate = emailTemplate.createAccount(emailValues);
-  emailHelper.sendEmail(accountEmailTemplate);
+  await emailHelper.sendEmail(accountEmailTemplate);
 
   // Update user with authentication details
   const updatedUser = await prisma.user.update({
     where: { id: result.id },
     data: {
-      authOneTimeCode: otp,
-      authExpireAt: new Date(Date.now() + 20 * 60000),
+      auth_one_time_code: otp,
+      auth_expire_at: new Date(Date.now() + 20 * 60000),
     },
   });
 
@@ -77,7 +79,7 @@ const getAllUsers = async (query: Record<string, unknown>) => {
     prisma.user.findMany({
       skip,
       take: size,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
     }),
     prisma.user.count(),
   ]);
@@ -110,16 +112,19 @@ const getUserProfileFromDB = async (user: JwtPayload) => {
 
 const updateProfileToDB = async (
   user: JwtPayload,
-  payload: IUserUpdate,
+  payload: TUpdateUserProfileArgs,
 ) => {
   const { id } = user;
-  const isExistUser = await UserHelpers.isExistUserById(id);
+
+  const isExistUser = await prisma.user.findUnique({
+    where: { id },
+  });
 
   if (!isExistUser) {
     throw new AppError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }
 
-  if (!isExistUser.verified) {
+  if (!isExistUser.is_verified) {
     throw new AppError(
       StatusCodes.BAD_REQUEST,
       'Please verify your account first',

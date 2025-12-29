@@ -1,0 +1,13 @@
+model ResetToken {
+  id         String   @id @default(uuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user_id   String
+  token     String
+  expire_at DateTime
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("reset_tokens")
+}

@@ -12,7 +12,7 @@ import handlePrismaKnownError from '../errors/handleCastError';
 import AppError from '../errors/AppError';
 import { errorLogger } from '../../shared/logger';
 import chalk from 'chalk';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/util/db';
 
 const globalErrorHandler: ErrorRequestHandler = (
   err,

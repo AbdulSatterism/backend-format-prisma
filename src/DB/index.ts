@@ -1,19 +1,23 @@
+/* eslint-disable no-console */
 import chalk from 'chalk';
 import config from '../config';
 import { USER_ROLES } from '../enums/user';
 import { logger } from '../shared/logger';
-import { prisma } from '../lib/prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
+import { EGender, Prisma, prisma } from '@/util/db';
 
 const superUser = {
-  name: 'starter backend',
+  name: 'Super Admin',
   role: USER_ROLES.ADMIN,
-  email: config.admin.email || 'admin@example.com',
-  password: config.admin.password || 'defaultPassword',
+  email: config.admin.email,
+  password: await bcrypt.hash(
+    config.admin.password ?? '12345678',
+    Number(config.bcrypt_salt_rounds),
+  ),
   phone: '14524578',
-  verified: true,
-  gender: 'MALE',
-};
+  is_verified: true,
+  gender: EGender.MALE,
+} satisfies Prisma.UserCreateArgs['data'];
 
 const seedAdmin = async () => {
   try {
@@ -22,20 +26,8 @@ const seedAdmin = async () => {
     });
 
     if (!isExistSuperAdmin) {
-      const hashedPassword = await bcrypt.hash(
-        superUser.password,
-        Number(config.bcrypt_salt_rounds),
-      );
       await prisma.user.create({
-        data: {
-          name: superUser.name,
-          role: superUser.role,
-          email: superUser.email,
-          password: hashedPassword,
-          phone: superUser.phone,
-          verified: superUser.verified,
-          gender: superUser.gender,
-        },
+        data: superUser,
       });
       logger.info(chalk.green('✔ admin created successfully!'));
     } else {

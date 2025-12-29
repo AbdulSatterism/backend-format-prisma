@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/util/db';
 import { TErrorSource, TGenericErrorResponse } from '../interface';
 
 const handlePrismaKnownError = (
