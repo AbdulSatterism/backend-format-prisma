@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres-your_app_name
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: your_app_name
+    ports:
+      - "5432:5432"
+    volumes:
+      - your_app_name_postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-your_app_name
+    ports:
+      - "6379:6379"
+    volumes:
+      - your_app_name_redis:/data
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander-your_app_name
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  your_app_name_postgres:
+  your_app_name_redis:
