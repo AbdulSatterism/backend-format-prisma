@@ -1,4 +1,4 @@
-import { EGender } from 'prisma/client/enums';
+import { EGender } from '@/util/db';
 import { z } from 'zod';
 
 const createUserSchema = z.object({
@@ -29,8 +29,8 @@ const updateUserProfileSchema = z.object({
 
 const updateLocationZodSchema = z.object({
   body: z.object({
-    longitude: z.string({ required_error: 'Longitude is required' }),
-    latitude: z.string({ required_error: 'Latitude is required' }),
+    longitude: z.string({ error: 'Longitude is required' }),
+    latitude: z.string({ error: 'Latitude is required' }),
   }),
 });
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-unused-vars */
-import { ResetToken as PrismaResetToken } from '@prisma/client';
+import { ResetToken as PrismaResetToken } from '@/util/db';
 
 export type IResetToken = PrismaResetToken;
 

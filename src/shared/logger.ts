@@ -2,29 +2,23 @@
 /* eslint-disable no-undef */
 import path from 'path';
 import DailyRotateFile from 'winston-daily-rotate-file';
-const { createLogger, format, transports } = require('winston');
+import winston from 'winston';
+
+const { createLogger, format, transports } = winston;
+
 const { combine, timestamp, label, printf } = format;
 
-const myFormat = printf(
-  ({
-    level,
-    message,
-    label,
-    timestamp,
-  }: {
-    level: string;
-    message: string;
-    label: string;
-    timestamp: Date;
-  }) => {
-    const date = new Date(timestamp);
-    const hour = date.getHours();
-    const minutes = date.getMinutes();
-    const seconds = date.getSeconds();
+const myFormat = printf(info => {
+  const { level, message, label, timestamp } = info;
 
-    return `${date.toDateString()} ${hour}:${minutes}:${seconds} [${label}] ${level}: ${message}`;
-  },
-);
+  // Ensure timestamp is a Date object before formatting
+  const date = new Date(timestamp);
+  const hour = date.getHours();
+  const minutes = date.getMinutes();
+  const seconds = date.getSeconds();
+
+  return `${date.toDateString()} ${hour}:${minutes}:${seconds} [${label}] ${level}: ${message}`;
+});
 
 const logger = createLogger({
   level: 'info',
