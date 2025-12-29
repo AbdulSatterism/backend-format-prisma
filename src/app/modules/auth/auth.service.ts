@@ -17,8 +17,6 @@ import {
 // import cryptoToken from '../../../util/cryptoToken';
 import generateOTP from '../../../util/generateOTP';
 
-import { UserHelpers } from '../user/user.model';
-import { ResetTokenHelpers } from '../resetToken/resetToken.model';
 import AppError from '../../errors/AppError';
 import unlinkFile from '../../../shared/unlinkFile';
 import { downloadImage, facebookToken } from './auth.lib';
@@ -29,7 +27,7 @@ import { prisma } from '@/util/db';
 //login
 const loginUserFromDB = async (payload: ILoginData) => {
   const { email, password } = payload;
-  const isExistUser = await prisma.user.findUnique({
+  const isExistUser = await prisma.user.findFirst({
     where: { email },
   });
   if (!isExistUser) {
@@ -37,7 +35,7 @@ const loginUserFromDB = async (payload: ILoginData) => {
   }
 
   //check verified and status
-  if (!isExistUser.verified) {
+  if (!isExistUser.is_verified) {
     throw new AppError(
       StatusCodes.BAD_REQUEST,
       'Please verify your account, then try to login again',
@@ -45,10 +43,7 @@ const loginUserFromDB = async (payload: ILoginData) => {
   }
 
   //check match password
-  if (
-    password &&
-    !(await UserHelpers.isMatchPassword(password, isExistUser.password))
-  ) {
+  if (!(await bcrypt.compare(password, isExistUser.password))) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Password is incorrect!');
   }
 
@@ -80,26 +75,29 @@ const loginUserFromDB = async (payload: ILoginData) => {
 
 //forget password
 const forgetPasswordToDB = async (email: string) => {
-  const isExistUser = await UserHelpers.isExistUserByEmail(email);
+  const isExistUser = await prisma.user.findFirst({
+    where: { email },
+  });
+
   if (!isExistUser) {
     throw new AppError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }
 
   //send mail
   const otp = generateOTP();
-  const value = {
+
+  const forgetPassword = emailTemplate.resetPassword({
+    email,
     otp,
-    email: isExistUser.email,
-  };
-  const forgetPassword = emailTemplate.resetPassword(value);
+  });
   emailHelper.sendEmail(forgetPassword);
 
   //save to DB
   await prisma.user.update({
-    where: { email },
+    where: { id: isExistUser.id },
     data: {
-      authOneTimeCode: otp,
-      authExpireAt: new Date(Date.now() + 20 * 60000),
+      auth_one_time_code: otp,
+      auth_expire_at: new Date(Date.now() + 20 * 60000),
     },
   });
 };
@@ -107,9 +105,10 @@ const forgetPasswordToDB = async (email: string) => {
 const verifyEmailToDB = async (payload: IVerifyEmail) => {
   const { email, oneTimeCode } = payload;
 
-  const isExistUser = await prisma.user.findUnique({
+  const isExistUser = await prisma.user.findFirst({
     where: { email },
   });
+
   if (!isExistUser) {
     throw new AppError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }
@@ -121,13 +120,13 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
     );
   }
 
-  // console.log(isExistUser.authOneTimeCode, { payload });
-  if (isExistUser.authOneTimeCode !== oneTimeCode) {
+  // console.log(isExistUser.auth_one_time_code, { payload });
+  if (isExistUser.auth_one_time_code !== oneTimeCode) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'You provided wrong otp');
   }
 
   const date = new Date();
-  if (isExistUser.authExpireAt && date > isExistUser.authExpireAt) {
+  if (isExistUser.auth_expire_at && date > isExistUser.auth_expire_at) {
     throw new AppError(
       StatusCodes.BAD_REQUEST,
       'Otp already expired, Please try again',
@@ -157,13 +156,13 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
   let message;
   let data;
 
-  if (!isExistUser.verified) {
+  if (!isExistUser.is_verified) {
     await prisma.user.update({
       where: { id: isExistUser.id },
       data: {
-        verified: true,
-        authOneTimeCode: null,
-        authExpireAt: null,
+        is_verified: true,
+        auth_one_time_code: null,
+        auth_expire_at: null,
       },
     });
     message = 'Your email has been successfully verified.';
@@ -172,18 +171,18 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
     await prisma.user.update({
       where: { id: isExistUser.id },
       data: {
-        authIsResetPassword: true,
-        authOneTimeCode: null,
-        authExpireAt: null,
+        auth_is_reset_password: true,
+        auth_one_time_code: null,
+        auth_expire_at: null,
       },
     });
 
     // const createToken = cryptoToken();
     await prisma.resetToken.create({
       data: {
-        userId: isExistUser.id,
+        user_id: isExistUser.id,
         token: accessToken,
-        expireAt: new Date(Date.now() + 20 * 60000),
+        expire_at: new Date(Date.now() + 20 * 60000),
       },
     });
     message = 'Verification Successful';
@@ -200,7 +199,9 @@ const resetPasswordToDB = async (
   const { newPassword, confirmPassword } = payload;
 
   //isExist token
-  const isExistToken = await ResetTokenHelpers.isExistToken(token);
+  const isExistToken = await prisma.resetToken.findFirst({
+    where: { token },
+  });
 
   if (!isExistToken) {
     throw new AppError(StatusCodes.UNAUTHORIZED, 'You are not authorized');
@@ -208,9 +209,9 @@ const resetPasswordToDB = async (
 
   //user permission check
   const isExistUser = await prisma.user.findUnique({
-    where: { id: isExistToken.userId },
+    where: { id: isExistToken.user_id },
   });
-  if (!isExistUser?.authIsResetPassword) {
+  if (!isExistUser?.auth_is_reset_password) {
     throw new AppError(
       StatusCodes.UNAUTHORIZED,
       "You don't have permission to change the password. Please click again to 'Forgot Password'",
@@ -218,7 +219,14 @@ const resetPasswordToDB = async (
   }
 
   //validity check
-  const isValid = await ResetTokenHelpers.isExpireToken(token);
+  const tokenData = await prisma.resetToken.findFirst({
+    where: { token },
+  });
+
+  const date = new Date();
+  const isValid =
+    tokenData && tokenData.expire_at && date < tokenData.expire_at;
+
   if (!isValid) {
     throw new AppError(
       StatusCodes.BAD_REQUEST,
@@ -240,10 +248,10 @@ const resetPasswordToDB = async (
   );
 
   await prisma.user.update({
-    where: { id: isExistToken.userId },
+    where: { id: isExistToken.user_id },
     data: {
       password: hashPassword,
-      authIsResetPassword: false,
+      auth_is_reset_password: false,
     },
   });
 };
@@ -264,7 +272,7 @@ const changePasswordToDB = async (
   //current password match
   if (
     currentPassword &&
-    !(await UserHelpers.isMatchPassword(currentPassword, isExistUser.password))
+    !(await bcrypt.compare(currentPassword, isExistUser.password))
   ) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Password is incorrect');
   }
@@ -337,7 +345,7 @@ const newAccessTokenToUser = async (token: string) => {
 
 const resendVerificationEmailToDB = async (email: string) => {
   // Find the user by ID
-  const existingUser = await prisma.user.findUnique({
+  const existingUser = await prisma.user.findFirst({
     where: { email },
   });
 
@@ -348,26 +356,26 @@ const resendVerificationEmailToDB = async (email: string) => {
     );
   }
 
-  if (existingUser?.verified) {
+  if (existingUser?.is_verified) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'User is already verified!');
   }
 
   // Generate OTP and prepare email
   const otp = generateOTP();
-  const emailValues = {
+
+  const accountEmailTemplate = emailTemplate.createAccount({
+    email,
     name: existingUser.name,
     otp,
-    email: existingUser.email,
-  };
-  const accountEmailTemplate = emailTemplate.createAccount(emailValues);
+  });
   emailHelper.sendEmail(accountEmailTemplate);
 
   // Update user with authentication details
   await prisma.user.update({
-    where: { email },
+    where: { id: existingUser.id },
     data: {
-      authOneTimeCode: otp,
-      authExpireAt: new Date(Date.now() + 20 * 60000),
+      auth_one_time_code: otp,
+      auth_expire_at: new Date(Date.now() + 20 * 60000),
     },
   });
 };
@@ -389,7 +397,7 @@ const googleLogin = async (payload: IGoogleLoginPayload) => {
   }
 
   // Check if user exists by email
-  let user = await prisma.user.findUnique({
+  let user = await prisma.user.findFirst({
     where: { email },
   });
 
@@ -409,20 +417,20 @@ const googleLogin = async (payload: IGoogleLoginPayload) => {
         email,
         name,
         image: image || '/default/user.jpg',
-        googleId: uid,
+        google_id: uid,
         role: 'USER',
-        verified: true,
+        is_verified: true,
         password: securePassword,
         phone: '',
       },
     });
-  } else if (!user.googleId) {
+  } else if (!user.google_id) {
     // Update existing user with Google ID if they haven't logged in with Google before
     user = await prisma.user.update({
       where: { id: user.id },
       data: {
-        googleId: uid,
-        verified: true,
+        google_id: uid,
+        is_verified: true,
         image: image || user.image,
       },
     });
@@ -499,7 +507,7 @@ const facebookLogin = async (payload: { token: string }) => {
 
     let user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: userData.email }, { facebookId: userData.id }],
+        OR: [{ email: userData.email }, { facebook_id: userData.id }],
       },
     });
 
@@ -519,7 +527,7 @@ const facebookLogin = async (payload: { token: string }) => {
           phone: '',
         },
       });
-    } else if (!user.facebookId) {
+    } else if (!user.facebook_id) {
       user = await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -595,7 +603,7 @@ const appleLogin = async (payload: { token: string }) => {
     // Step 3 — Find or create user
     let user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: appleData.email }, { appleId: appleData.sub }],
+        OR: [{ email: appleData.email }, { apple_id: appleData.sub }],
       },
     });
 
@@ -611,7 +619,7 @@ const appleLogin = async (payload: { token: string }) => {
           phone: '',
         },
       });
-    } else if (!user.appleId) {
+    } else if (!user.apple_id) {
       user = await prisma.user.update({
         where: { id: user.id },
         data: {

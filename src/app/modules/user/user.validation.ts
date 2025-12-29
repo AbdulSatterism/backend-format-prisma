@@ -1,3 +1,4 @@
+import { EGender } from 'prisma/client/enums';
 import { z } from 'zod';
 
 const createUserSchema = z.object({
@@ -21,7 +22,7 @@ const updateUserProfileSchema = z.object({
     age: z.number().optional(),
     height: z.number().optional(),
     weight: z.number().optional(),
-    gender: z.enum(['MALE', 'FEMALE', 'OTHERS']).optional(),
+    gender: z.nativeEnum(EGender).optional(),
     fitnessLevel: z.enum(['BASIC', 'INTERMEDIATE', 'ADVANCED']).optional(),
   }),
 });
