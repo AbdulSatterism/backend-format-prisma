@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { StatusCodes } from 'http-status-codes';
 import { JwtPayload, Secret } from 'jsonwebtoken';
 import config from '../../../config';
@@ -23,8 +23,8 @@ import AppError from '../../errors/AppError';
 import unlinkFile from '../../../shared/unlinkFile';
 import { downloadImage, facebookToken } from './auth.lib';
 import { verifyAppleToken } from '../../../helpers/appleHelper';
-import { prisma } from '../../../lib/prisma';
 import generateSecurePassword from '../../../util/generateSecurePassword';
+import { prisma } from '@/util/db';
 
 //login
 const loginUserFromDB = async (payload: ILoginData) => {

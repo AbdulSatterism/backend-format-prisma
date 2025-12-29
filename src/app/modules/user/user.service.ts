@@ -12,9 +12,9 @@ import { IUserCreate, IUserUpdate } from './user.interface';
 import { UserHelpers } from './user.model';
 import unlinkFile from '../../../shared/unlinkFile';
 import AppError from '../../errors/AppError';
-import { prisma } from '../../../lib/prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import config from '../../../config';
+import { prisma } from '@/util/db';
 
 const createUserFromDb = async (payload: IUserCreate) => {
   // Check if user exists
@@ -108,10 +108,7 @@ const getUserProfileFromDB = async (user: JwtPayload) => {
   return isExistUser;
 };
 
-const updateProfileToDB = async (
-  user: JwtPayload,
-  payload: IUserUpdate,
-) => {
+const updateProfileToDB = async (user: JwtPayload, payload: IUserUpdate) => {
   const { id } = user;
   const isExistUser = await UserHelpers.isExistUserById(id);
 

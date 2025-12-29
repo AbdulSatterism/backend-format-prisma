@@ -2,8 +2,8 @@ import chalk from 'chalk';
 import config from '../config';
 import { USER_ROLES } from '../enums/user';
 import { logger } from '../shared/logger';
-import { prisma } from '../lib/prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
+import { prisma } from '@/util/db';
 
 const superUser = {
   name: 'starter backend',

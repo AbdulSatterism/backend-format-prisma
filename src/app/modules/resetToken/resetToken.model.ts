@@ -1,4 +1,4 @@
-import { prisma } from '../../../lib/prisma';
+import { prisma } from '@/util/db';
 import { IResetToken } from './resetToken.interface';
 
 export const ResetTokenHelpers = {

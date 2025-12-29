@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import bcrypt from 'bcrypt';
-import { prisma } from '../../../lib/prisma';
+import { prisma } from '@/util/db';
+import bcrypt from 'bcryptjs';
 
 // Helper functions that were in the Mongoose model
 export const UserHelpers = {
