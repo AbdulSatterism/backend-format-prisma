@@ -5,3 +5,5 @@ vscode
 /winston
 .vercel
 dist
+
+prisma

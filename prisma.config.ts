@@ -1,3 +1,5 @@
+import './src/config'; //? Ensure environment variables are loaded
+
 import path from 'path';
 import { defineConfig, env } from 'prisma/config';
 
