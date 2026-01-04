@@ -1,4 +1,3 @@
-import { EGender } from '@/util/db';
 import { z } from 'zod';
 
 const createUserSchema = z.object({
@@ -17,13 +16,6 @@ const updateUserProfileSchema = z.object({
   body: z.object({
     name: z.string().optional(),
     phone: z.string().optional(),
-    country: z.string().optional(),
-    injury: z.string().optional(),
-    age: z.number().optional(),
-    height: z.number().optional(),
-    weight: z.number().optional(),
-    gender: z.nativeEnum(EGender).optional(),
-    fitnessLevel: z.enum(['BASIC', 'INTERMEDIATE', 'ADVANCED']).optional(),
   }),
 });
 

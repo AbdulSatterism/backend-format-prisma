@@ -196,7 +196,7 @@ const resetPasswordToDB = async (
   token: string,
   payload: IAuthResetPassword,
 ) => {
-  const { newPassword, confirmPassword } = payload;
+  const { newPassword } = payload;
 
   //isExist token
   const isExistToken = await prisma.resetToken.findFirst({
@@ -234,14 +234,6 @@ const resetPasswordToDB = async (
     );
   }
 
-  //check password
-  if (newPassword !== confirmPassword) {
-    throw new AppError(
-      StatusCodes.BAD_REQUEST,
-      "New password and Confirm password doesn't match!",
-    );
-  }
-
   const hashPassword = await bcrypt.hash(
     newPassword,
     Number(config.bcrypt_salt_rounds),
@@ -260,7 +252,7 @@ const changePasswordToDB = async (
   user: JwtPayload,
   payload: IChangePassword,
 ) => {
-  const { currentPassword, newPassword, confirmPassword } = payload;
+  const { currentPassword, newPassword } = payload;
 
   const isExistUser = await prisma.user.findUnique({
     where: { id: user.id },
@@ -282,13 +274,6 @@ const changePasswordToDB = async (
     throw new AppError(
       StatusCodes.BAD_REQUEST,
       'Please give different password from current password',
-    );
-  }
-  //new password and confirm password check
-  if (newPassword !== confirmPassword) {
-    throw new AppError(
-      StatusCodes.BAD_REQUEST,
-      "Password and Confirm password doesn't matched",
     );
   }
 
@@ -381,7 +366,7 @@ const resendVerificationEmailToDB = async (email: string) => {
 };
 
 //! login with google
-
+/*
 interface IGoogleLoginPayload {
   email: string;
   name: string;
@@ -668,6 +653,8 @@ const appleLogin = async (payload: { token: string }) => {
   }
 };
 
+*/
+
 export const AuthService = {
   verifyEmailToDB,
   loginUserFromDB,
@@ -677,7 +664,4 @@ export const AuthService = {
   deleteAccountToDB,
   newAccessTokenToUser,
   resendVerificationEmailToDB,
-  googleLogin,
-  facebookLogin,
-  appleLogin,
 };

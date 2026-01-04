@@ -122,6 +122,7 @@ const resendVerificationEmail = catchAsync(
   },
 );
 
+/*
 const googleLogin = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthService.googleLogin(req.body);
 
@@ -155,6 +156,8 @@ const appleLogin = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+*/
+
 export const AuthController = {
   verifyEmail,
   loginUser,
@@ -164,7 +167,4 @@ export const AuthController = {
   deleteAccount,
   newAccessToken,
   resendVerificationEmail,
-  googleLogin,
-  facebookLogin,
-  appleLogin,
 };
